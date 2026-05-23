@@ -70,6 +70,20 @@ Open [http://localhost:3000](http://localhost:3000).
 - Zod
 - Sonner (toasts)
 
+## Architecture
+
+```text
+Next.js App Router
+        ↓
+Route Handlers
+        ↓
+Business Logic Layer
+        ↓
+Prisma Transactions
+        ↓
+PostgreSQL Row Locks
+```
+
 ---
 
 ## API endpoints
