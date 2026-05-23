@@ -36,7 +36,16 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable       | Description                |
 | ---------------- | -------------------------- |
-| `DATABASE_URL`   | PostgreSQL connection URL  |
+| `DATABASE_URL`   | PostgreSQL connection URL (use Supabase **pooler** port `6543` with `?pgbouncer=true` for Vercel) |
+
+### Deploy on Vercel
+
+1. Import [github.com/AdityaShankar1/allo-reservations](https://github.com/AdityaShankar1/allo-reservations)
+2. Set `DATABASE_URL` in Project → Settings → Environment Variables
+3. Deploy (build runs `prisma generate` via `postinstall` + `build` script)
+4. Seed once: `npm run db:seed` (from a machine with DB access)
+
+**Live:** https://allo-reservations-nine.vercel.app
 
 ---
 
