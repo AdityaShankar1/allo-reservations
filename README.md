@@ -86,6 +86,33 @@ Prisma Transactions
 PostgreSQL Row Locks
 ```
 
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant A as Next.js API
+    participant D as Database (Postgres)
+    participant C as Cleanup Job
+
+    U->>A: POST /api/reservations (reserve)
+    A->>D: SELECT ... FOR UPDATE (Lock Row)
+    D-->>A: Current Capacity
+    alt Sufficient Stock
+        A->>D: Increment reservedQuantity + Create Reservation
+        D-->>A: OK
+        A-->>U: 201 Created (10m hold)
+    else Insufficient Stock
+        A-->>U: 409 Conflict
+    end
+
+    U->>A: POST /api/reservations/:id/confirm (pay)
+    A->>D: Update stock + Release Reservation
+    D-->>A: OK
+    A-->>U: 200 OK
+
+    C->>D: Sweep expired reservations
+    D->>D: reservedQuantity -= quantity
+```
+
 ---
 
 ## API endpoints
