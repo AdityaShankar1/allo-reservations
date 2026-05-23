@@ -100,6 +100,8 @@ PostgreSQL Row Locks
 
 ## Concurrency handling
 
+PostgreSQL row-level locking was chosen over distributed locking systems because it provides strong transactional guarantees with minimal infrastructure complexity for this scale of application.
+
 The create-reservation endpoint uses a Prisma transaction with PostgreSQL row-level locking:
 
 ```sql
@@ -134,6 +136,7 @@ If stock is insufficient, the transaction rolls back and the API returns **409**
 - **No idempotency keys** — would add Redis or a DB table for the bonus
 - **Lazy expiry** — simple and correct, but stock may stay reserved until the next read/confirm if the user abandons the page
 - **Polling UI** — reservation page refetches every 3s instead of WebSockets
+- **Redis** - Redis-based distributed locking was intentionally avoided in the MVP because PostgreSQL transactions already provide sufficient correctness guarantees for inventory reservation at this scale.
 
 ---
 
@@ -176,3 +179,12 @@ prisma/
 | `npm run build` | Production build |
 | `npm run db:push` | Sync schema to database |
 | `npm run db:seed` | Seed demo data |
+
+## Next Improvements
+
+- Idempotency keys for retry-safe payment flows
+- Cron-based expiry sweeper
+- WebSocket inventory updates
+- Reservation metrics / audit logs
+- Distributed worker queues for async processing
+
