@@ -1,0 +1,155 @@
+# Allo Reservations
+
+A concurrency-safe inventory reservation system built for the Allo Engineering take-home exercise.
+
+## Problem Statement
+
+In ecommerce systems, payment confirmation may take several minutes due to UPI, 3DS, wallet redirects, or banking delays.
+
+If inventory is decremented only after payment succeeds, multiple users may successfully pay for the same physical unit.
+
+This project solves that problem using temporary inventory reservations.
+
+---
+
+## Quick start
+
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL (Supabase or any hosted Postgres)
+
+### Setup
+
+```bash
+npm install
+cp .env.example .env
+# Set DATABASE_URL in .env to your Postgres connection string
+npx prisma db push
+npm run db:seed
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Environment
+
+| Variable       | Description                |
+| ---------------- | -------------------------- |
+| `DATABASE_URL`   | PostgreSQL connection URL  |
+
+---
+
+## Core flow
+
+1. User reserves inventory during checkout
+2. Inventory becomes temporarily unavailable (`reservedQuantity` increases)
+3. Reservation expires after **10 minutes**
+4. User may confirm purchase or cancel the reservation
+5. Expired reservations release stock automatically (lazy cleanup)
+
+---
+
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Prisma ORM
+- PostgreSQL (Supabase)
+- Tailwind CSS
+- shadcn/ui
+- Zod
+- Sonner (toasts)
+
+---
+
+## API endpoints
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/products` | Products with per-warehouse stock and `availableStock` |
+| POST | `/api/reservations` | Create reservation (409 if insufficient stock) |
+| GET | `/api/reservations/:id` | Reservation details + countdown |
+| POST | `/api/reservations/:id/confirm` | Confirm purchase (410 if expired) |
+| POST | `/api/reservations/:id/release` | Cancel / release hold |
+
+---
+
+## Concurrency handling
+
+The create-reservation endpoint uses a Prisma transaction with PostgreSQL row-level locking:
+
+```sql
+SELECT ... FROM "Inventory" WHERE ... FOR UPDATE
+```
+
+Inside the transaction:
+
+1. Lock the inventory row
+2. Check `totalQuantity - reservedQuantity >= requested quantity`
+3. Increment `reservedQuantity`
+4. Create the reservation with `expiresAt = now + 10 minutes`
+
+If stock is insufficient, the transaction rolls back and the API returns **409**.
+
+---
+
+## Reservation expiry
+
+**Current approach:** lazy cleanup
+
+- On `GET /api/reservations/:id`, expired pending reservations are released
+- On `POST .../confirm`, expired reservations return **410** and stock is released first
+
+**Production improvement:** a Vercel Cron job (or `pg_cron`) to sweep expired reservations periodically, so stock is returned even if nobody reads the reservation again.
+
+---
+
+## Trade-offs
+
+- **No auth** — demo MVP only
+- **No idempotency keys** — would add Redis or a DB table for the bonus
+- **Lazy expiry** — simple and correct, but stock may stay reserved until the next read/confirm if the user abandons the page
+- **Polling UI** — reservation page refetches every 3s instead of WebSockets
+
+---
+
+## Project structure
+
+```
+src/
+  app/
+    api/          # Route handlers (thin)
+    page.tsx      # Product catalog
+    reservation/  # Checkout / hold page
+  components/     # UI + client features
+  lib/
+    reservations.ts  # Business logic + transactions
+    products.ts
+    validations.ts
+prisma/
+  schema.prisma
+  seed.ts
+```
+
+---
+
+## Demo script
+
+1. Open the home page — three products across three warehouses
+2. Reserve 1 unit of **Ceramic Mug** from **Los Angeles** (only 1 available)
+3. On the reservation page, watch the 10-minute countdown
+4. **Confirm** — stock is permanently decremented
+5. Or **Cancel** — reserved units return to available stock
+6. Try reserving the last LA mug in two browser tabs — one gets 409
+
+---
+
+## Scripts
+
+| Command | Description |
+| ------- | ----------- |
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm run db:push` | Sync schema to database |
+| `npm run db:seed` | Seed demo data |
