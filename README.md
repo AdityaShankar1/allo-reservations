@@ -2,6 +2,8 @@
 
 A concurrency-safe inventory reservation system built for the Allo Engineering take-home exercise.
 
+[![Watch the video](https://img.youtube.com/vi/fw1sIspfExw/maxresdefault.jpg)](https://youtu.be/fw1sIspfExw)
+
 ## Problem Statement
 
 In ecommerce systems, payment confirmation may take several minutes due to UPI, 3DS, wallet redirects, or banking delays.
