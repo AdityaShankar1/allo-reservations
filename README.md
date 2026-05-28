@@ -119,7 +119,6 @@ sequenceDiagram
     D->>D: reservedQuantity -= quantity
 ```
 
----
 
 ## API endpoints
 
